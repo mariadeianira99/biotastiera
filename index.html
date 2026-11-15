@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioTastiera - Laboratorio Accessibile di Biologia</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts puliti ad alta leggibilità -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Verdana&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome per Icone -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'Verdana', 'sans-serif'],
+                        dyslexic: ['Verdana', 'sans-serif'],
+                    },
+                    colors: {
+                        bio: {
+                            bg: '#0F172A',
+                            card: '#1E293B',
+                            border: '#334155',
+                            accent: '#38BDF8',
+                            green: '#22C55E',
+                            yellow: '#FBBF24',
+                            purple: '#C084FC'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Regole di accessibilità per dislessia e DSA */
+        body {
+            letter-spacing: 0.05em;
+            line-height: 1.6;
+        }
+        .dyslexia-font {
+            font-family: Verdana, sans-serif !important;
+            letter-spacing: 0.1em !important;
+            word-spacing: 0.2em !important;
+            line-height: 1.8 !important;
+        }
+        
+        /* Evidenziazione caratteri del testo */
+        .char {
+            transition: all 0.1s ease;
+            padding: 0 2px;
+            border-radius: 4px;
+        }
+        .char.correct {
+            color: #22C55E;
+            background-color: rgba(34, 197, 94, 0.15);
+            font-weight: bold;
+        }
+        .char.incorrect {
+            color: #F59E0B; /* Giallo/Ambra gentile invece del rosso aggressivo */
+            background-color: rgba(245, 158, 11, 0.2);
+            text-decoration: underline;
+        }
+        .char.current {
+            background-color: rgba(56, 189, 248, 0.4);
+            border-bottom: 3px solid #38BDF8;
+        }
+
+        /* Stile tastiera virtuale */
+        .v-key {
+            transition: all 0.08s ease;
+            user-select: none;
+        }
+        .v-key.active-target {
+            background-color: #38BDF8 !important;
+            color: #0F172A !important;
+            transform: scale(1.08);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+            border-color: #ffffff !important;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-bio-bg text-slate-100 font-sans h-full min-h-screen flex flex-col justify-between selection:bg-sky-500 selection:text-slate-900">
+
+    <div class="flex flex-col min-h-screen">
+        <!-- Header Accessibile -->
+        <header class="border-b border-bio-border bg-bio-card/90 backdrop-blur sticky top-0 z-20">
+            <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-green-500 to-sky-400 flex items-center justify-center shadow-md">
+                        <i class="fa-solid fa-seedling text-slate-900 text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg tracking-wide text-white">
+                            BioTastiera <span class="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 ml-1">Accessibile</span>
+                        </h1>
+                        <p class="text-xs text-slate-400">Palestra di digitazione e scienze naturali</p>
+                    </div>
+                </div>
+
+                <!-- Strumenti di Accessibilità -->
+                <div class="flex items-center space-x-2">
+                    <button id="btn-font-toggle" class="px-3 py-1.5 rounded-xl bg-bio-border hover:bg-slate-700 text-xs font-semibold flex items-center space-x-1.5 transition" title="Attiva font ad alta leggibilità">
+                        <i class="fa-solid fa-font"></i>
+                        <span class="hidden sm:inline">Font DSA</span>
+                    </button>
+                    <button id="btn-audio-toggle" class="p-2.5 rounded-xl bg-bio-border hover:bg-slate-700 text-slate-200 transition" title="Attiva/Disattiva Suoni">
+                        <i class="fa-solid fa-volume-high" id="sound-icon"></i>
+                    </button>
+                    <button id="btn-help" class="p-2.5 rounded-xl bg-bio-border hover:bg-slate-700 text-slate-200 transition" title="Istruzioni e Aiuto">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenuto Principale -->
+        <main class="max-w-4xl mx-auto px-4 py-6 flex-grow flex flex-col justify-center w-full" id="main-container">
+
+            <!-- 1. SCHERMATA INIZIALE (BENVENUTO & UTENTE) -->
+            <div id="welcome-panel" class="space-y-6 max-w-lg mx-auto w-full bg-bio-card border border-bio-border p-6 sm:p-8 rounded-3xl shadow-xl">
+                <div class="text-center space-y-2">
+                    <div class="w-16 h-16 rounded-3xl bg-sky-500/20 text-sky-400 text-3xl mx-auto flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white">Benvenuto in BioTastiera!</h2>
+                    <p class="text-slate-300 text-sm">Inserisci il tuo nome e cognome per iniziare l'esperienza di apprendimento personalizzata.</p>
+                </div>
+
+                <form id="user-form" class="space-y-4 pt-2">
+                    <div>
+                        <label class="block text-xs font-bold text-sky-400 uppercase tracking-wider mb-1.5">
+                            <i class="fa-solid fa-user mr-1.5"></i> Nome
+                        </label>
+                        <input type="text" id="input-name" required placeholder="Es. Marco" 
+                            class="w-full bg-bio-bg border border-bio-border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-sky-400 uppercase tracking-wider mb-1.5">
+                            <i class="fa-solid id-card mr-1.5"></i> Cognome
+                        </label>
+                        <input type="text" id="input-surname" required placeholder="Es. Rossi" 
+                            class="w-full bg-bio-bg border border-bio-border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 transition">
+                    </div>
+
+                    <button type="submit" id="btn-goto-setup" class="w-full py-3.5 rounded-xl font-bold text-base bg-gradient-to-r from-green-500 to-sky-400 text-slate-900 shadow-md hover:opacity-95 transition flex items-center justify-center space-x-2 mt-4">
+                        <span>Avanti</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- 2. SCHERMATA DI CONFIGURAZIONE (SCELTA CATEGORIA & TIMER) -->
+            <div id="setup-panel" class="space-y-6 hidden">
+                <div class="text-center space-y-2 mb-4">
+                    <h2 id="greeting-title" class="text-2xl sm:text-3xl font-bold text-white">Ciao! Scegli la tua sfida</h2>
+                    <p class="text-slate-300 max-w-lg mx-auto text-sm sm:text-base">Seleziona un argomento di scienze e un tempo rilassante. La tastiera virtuale ti guiderà passo dopo passo.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Selezione Argomento Biologia -->
+                    <div class="bg-bio-card border border-bio-border p-5 rounded-2xl shadow-lg">
+                        <label class="block text-sm font-bold text-sky-400 uppercase tracking-wider mb-3">
+                            <i class="fa-solid fa-dna mr-2"></i>1. Argomento di Biologia
+                        </label>
+                        <div class="grid grid-cols-2 gap-3" id="category-selector">
+                            <button type="button" data-cat="words" class="cat-btn active p-3.5 rounded-xl border border-sky-400 bg-sky-500/15 text-left transition flex flex-col justify-between space-y-1.5">
+                                <i class="fa-solid fa-puzzle-piece text-xl text-sky-400"></i>
+                                <div>
+                                    <div class="font-bold text-white text-sm">Parole Chiave</div>
+                                    <div class="text-[11px] text-slate-400">Termini brevi (Cellula, DNA...)</div>
+                                </div>
+                            </button>
+                            <button type="button" data-cat="cells" class="cat-btn p-3.5 rounded-xl border border-bio-border bg-bio-bg/50 hover:bg-bio-bg text-left transition flex flex-col justify-between space-y-1.5">
+                                <i class="fa-solid fa-circle-nodes text-xl text-green-400"></i>
+                                <div>
+                                    <div class="font-bold text-white text-sm">La Cellula</div>
+                                    <div class="text-[11px] text-slate-400">Nucleo, membrana e vita</div>
+                                </div>
+                            </button>
+                            <button type="button" data-cat="plants" class="cat-btn p-3.5 rounded-xl border border-bio-border bg-bio-bg/50 hover:bg-bio-bg text-left transition flex flex-col justify-between space-y-1.5">
+                                <i class="fa-solid fa-seedling text-xl text-emerald-400"></i>
+                                <div>
+                                    <div class="font-bold text-white text-sm">Il Mondo Vegetale</div>
+                                    <div class="text-[11px] text-slate-400">Piante, foglie e radici</div>
+                                </div>
+                            </button>
+                            <button type="button" data-cat="body" class="cat-btn p-3.5 rounded-xl border border-bio-border bg-bio-bg/50 hover:bg-bio-bg text-left transition flex flex-col justify-between space-y-1.5">
+                                <i class="fa-solid fa-heart-pulse text-xl text-amber-400"></i>
+                                <div>
+                                    <div class="font-bold text-white text-sm">Il Corpo Umano</div>
+                                    <div class="text-[11px] text-slate-400">Muscoli, ossa e cuore</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selezione Tempo / Modalità -->
+                    <div class="bg-bio-card border border-bio-border p-5 rounded-2xl shadow-lg flex flex-col justify-between">
+                        <div>
+                            <label class="block text-sm font-bold text-sky-400 uppercase tracking-wider mb-3">
+                                <i class="fa-solid fa-clock mr-2"></i>2. Modalità di Tempo
+                            </label>
+                            <div class="grid grid-cols-3 gap-2.5" id="time-selector">
+                                <button type="button" data-time="0" class="time-btn p-3 rounded-xl border border-bio-border bg-bio-bg/50 text-center transition">
+                                    <div class="text-base font-bold text-white">Libero</div>
+                                    <div class="text-[10px] text-slate-400">Senza ansia</div>
+                                </button>
+                                <button type="button" data-time="45" class="time-btn active p-3 rounded-xl border border-sky-400 bg-sky-500/15 text-center transition">
+                                    <div class="text-base font-bold text-white">45 sec</div>
+                                    <div class="text-[10px] text-slate-400">Tranquillo</div>
+                                </button>
+                                <button type="button" data-time="90" class="time-btn p-3 rounded-xl border border-bio-border bg-bio-bg/50 text-center transition">
+                                    <div class="text-base font-bold text-white">90 sec</div>
+                                    <div class="text-[10px] text-slate-400">Standard</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-bio-border flex gap-3">
+                            <button type="button" id="btn-back-to-welcome" class="px-4 py-3.5 rounded-xl font-semibold text-sm bg-bio-border hover:bg-slate-700 text-slate-300 transition">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
+                            <button type="button" id="btn-start" class="flex-1 py-3.5 rounded-xl font-bold text-base bg-gradient-to-r from-green-500 to-sky-400 text-slate-900 shadow-md hover:opacity-95 transition flex items-center justify-center space-x-2">
+                                <span>INIZIA ESPERIENZA</span>
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. SCHERMATA DI GIOCO DIGITAZIONE -->
+            <div id="game-panel" class="hidden space-y-5">
+                <!-- Bar Statistiche & Audio Lettura -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-bio-card border border-bio-border px-4 py-3 rounded-2xl shadow">
+                    <div class="flex items-center space-x-4">
+                        <div>
+                            <span class="text-xs text-slate-400 block">Tempo</span>
+                            <span id="stat-timer" class="text-lg font-bold text-sky-400 font-mono">45s</span>
+                        </div>
+                        <div class="border-l border-bio-border pl-4">
+                            <span class="text-xs text-slate-400 block">Parole corrette</span>
+                            <span id="stat-words" class="text-lg font-bold text-green-400 font-mono">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Lettore Vocale Testo -->
+                    <button type="button" id="btn-speak" class="px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-xs font-semibold flex items-center space-x-2 border border-sky-500/30 transition" title="Ascolta la pronuncia del testo">
+                        <i class="fa-solid fa-volume-high"></i>
+                        <span>Ascolta Testo</span>
+                    </button>
+                </div>
+
+                <!-- Box Testo da Digitare (Grande e chiaro) -->
+                <div class="relative bg-bio-card border-2 border-bio-border rounded-2xl p-6 md:p-8 shadow-xl">
+                    <div class="flex items-center justify-between mb-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        <span id="game-category-label"><i class="fa-solid fa-seedling mr-1 text-green-400"></i> Parola Corrente</span>
+                        <span>Digita i caratteri evidenziati sotto</span>
+                    </div>
+
+                    <!-- Input nascosto per catturare tastiera -->
+                    <input type="text" id="hidden-input" class="absolute opacity-0 pointer-events-none" autocomplete="off" spellcheck="false">
+
+                    <!-- Testo da digitare -->
+                    <div id="typing-text" class="text-xl sm:text-2xl md:text-3xl font-medium tracking-wide text-slate-300 min-h-[90px] flex items-center flex-wrap gap-y-2 select-none leading-relaxed">
+                        <!-- Generato via JS -->
+                    </div>
+
+                    <!-- Overlay se perde focus -->
+                    <div id="focus-overlay" class="absolute inset-0 bg-bio-bg/85 backdrop-blur-sm flex flex-col items-center justify-center cursor-pointer text-sky-400 font-semibold text-base rounded-2xl">
+                        <i class="fa-solid fa-hand-pointer text-3xl mb-2 animate-bounce"></i>
+                        <span>Clicca qui per iniziare a digitare</span>
+                    </div>
+                </div>
+
+                <!-- Tastiera Virtuale Interattiva -->
+                <div class="bg-bio-card border border-bio-border p-3 sm:p-4 rounded-2xl shadow-xl overflow-x-auto">
+                    <div class="min-w-[620px] max-w-3xl mx-auto space-y-1.5">
+                        <!-- Riga 1 -->
+                        <div class="flex justify-center space-x-1" id="k-row-1"></div>
+                        <!-- Riga 2 -->
+                        <div class="flex justify-center space-x-1" id="k-row-2"></div>
+                        <!-- Riga 3 -->
+                        <div class="flex justify-center space-x-1" id="k-row-3"></div>
+                        <!-- Riga 4 Spazio -->
+                        <div class="flex justify-center space-x-1" id="k-row-4"></div>
+                    </div>
+                </div>
+
+                <!-- Footer azioni gioco -->
+                <div class="flex justify-between items-center text-xs text-slate-400 px-2">
+                    <div>Suggerimento: segui il colore azzurro sulla tastiera virtuale.</div>
+                    <button type="button" id="btn-restart" class="px-3 py-1.5 rounded-lg bg-bio-border hover:bg-slate-700 text-slate-300 font-semibold transition">
+                        <i class="fa-solid fa-rotate-right mr-1"></i>Riavvia
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. SCHERMATA REPORT FINALE -->
+            <div id="modal-report" class="fixed inset-0 bg-bio-bg/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+                <div class="bg-bio-card border-2 border-green-500/40 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative text-center space-y-5">
+                    <div class="w-16 h-16 rounded-3xl bg-green-500/20 text-green-400 text-3xl mx-auto flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-award" id="report-icon"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-1">Ottimo Lavoro, <span id="report-username" class="text-sky-400">Studente</span>!</h2>
+                        <p id="report-badge-title" class="text-green-400 font-semibold text-sm">Hai conquistato la Fogliolina d'Oro!</p>
+                    </div>
+
+                    <!-- Statistiche gentili -->
+                    <div class="grid grid-cols-2 gap-3 bg-bio-bg/60 border border-bio-border p-4 rounded-2xl">
+                        <div>
+                            <div class="text-xs text-slate-400">Parole Completate</div>
+                            <div id="report-words" class="text-2xl font-bold text-green-400 font-mono">0</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-400">Precisione</div>
+                            <div id="report-accuracy" class="text-2xl font-bold text-sky-400 font-mono">100%</div>
+                        </div>
+                    </div>
+
+                    <!-- Frase motivazionale personalizzata -->
+                    <p id="report-praise" class="text-slate-300 text-sm leading-relaxed px-2">
+                        Hai dimostrato grande impegno e costanza. La biologia è piena di meraviglie e le tue dita stanno diventando sempre più agili!
+                    </p>
+
+                    <!-- Pulsanti -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <button type="button" id="btn-play-again" class="flex-1 py-3 bg-gradient-to-r from-green-500 to-sky-400 text-slate-900 font-bold rounded-xl shadow hover:opacity-95 transition">
+                            <i class="fa-solid fa-rotate-right mr-2"></i>Gioca Ancora
+                        </button>
+                        <button type="button" id="btn-change-setup" class="flex-1 py-3 bg-bio-border hover:bg-slate-700 text-white font-bold rounded-xl transition">
+                            <i class="fa-solid fa-sliders mr-2"></i>Menu Scienze
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODALE INFO / GUIDA -->
+            <div id="modal-info" class="fixed inset-0 bg-bio-bg/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+                <div class="bg-bio-card border border-bio-border rounded-3xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+                    <button type="button" id="btn-close-info" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <h3 class="text-lg font-bold text-white flex items-center">
+                        <i class="fa-solid fa-seedling text-green-400 mr-2"></i>Guida a BioTastiera
+                    </h3>
+                    <div class="space-y-2.5 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        <p><strong class="text-white">1. Inserimento:</strong> Inserisci nome e cognome per iniziare.</p>
+                        <p><strong class="text-white">2. Senza fretta:</strong> Scegli il tempo che preferisci o la modalità libera per digitare in totale tranquillità.</p>
+                        <p><strong class="text-white">3. Tastiera Guida:</strong> Guarda il tasto azzurro illuminato sulla tastiera virtuale per sapere quale tasto premere.</p>
+                        <p><strong class="text-white">4. Leggibilità DSA:</strong> Puoi attivare il font ad alta leggibilità in alto a destra in qualsiasi momento.</p>
+                        <p><strong class="text-white">5. Ascolto Vocale:</strong> Premi il tasto "Ascolta Testo" per sentire la pronuncia delle parole scientifiche.</p>
+                    </div>
+                    <button type="button" id="btn-ack-info" class="w-full py-2.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold rounded-xl border border-sky-500/40 transition text-xs sm:text-sm">
+                        Ho capito, iniziamo!
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-bio-border py-3 text-center text-xs text-slate-500 bg-bio-card/90">
+            <div class="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-1">
+                <div>BioTastiera &bull; Didattica Inclusiva e Scienze</div>
+                <div class="text-slate-400"><i class="fa-solid fa-heart text-red-400 mr-1"></i> Progettato per l'accessibilità</div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- SCRIPT APPLICAZIONE -->
+    <script>
+        /* ========================================================
+           DATABASE DI BIOLOGIA OTTIMIZZATO PER RAGAZZI
+           ======================================================== */
+        const BIO_CONTENT = {
+            words: [
+                "cellula", "nucleo", "dna", "pianta", "foglia", "radice", 
+                "muscolo", "cuore", "ossigeno", "batterio", "ecosistema", "fiore"
+            ],
+            cells: [
+                "La cellula e l unita fondamentale della vita.",
+                "Il nucleo custodisce il prezioso DNA.",
+                "La membrana cellulare protegge l interno.",
+                "I mitocondri producono energia per la cellula."
+            ],
+            plants: [
+                "Le piante producono ossigeno per tutti noi.",
+                "La clorofilla cattura la luce del Sole.",
+                "Le radici assorbono acqua dal terreno.",
+                "Il fiore permette alla pianta di riprodursi."
+            ],
+            body: [
+                "Il cuore pompa il sangue in tutto il corpo.",
+                "I muscoli ci permettono di camminare e correre.",
+                "Lo scheletro sostiene e protegge gli organi.",
+                "I polmoni respirano l aria fresca ogni giorno."
+            ]
+        };
+
+        /* ========================================================
+           STATO APPLICAZIONE
+           ======================================================== */
+        let studentName = "";
+        let studentSurname = "";
+        let currentCategory = 'words';
+        let timeLimit = 45; // secondi (0 = libero)
+        
+        let textList = [];
+        let currentTextIndex = 0;
+        let currentText = "";
+        let currentCharIdx = 0;
+        
+        let timerSeconds = 45;
+        let timerInterval = null;
+        let isGaming = false;
+        let isStarted = false;
+        
+        let wordsCompletedCount = 0;
+        let totalCharsTyped = 0;
+        let totalErrorsCount = 0;
+        let soundEnabled = true;
+        let dyslexiaFontActive = false;
+
+        /* ========================================================
+           GENERAZIONE TASTIERA VIRTUALE INTERATTIVA
+           ======================================================== */
+        const KEYBOARD_LAYOUT = [
+            ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+            ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+            ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
+            [' '] // Spazio
+        ];
+
+        function buildVirtualKeyboard() {
+            const rows = [
+                document.getElementById('k-row-1'),
+                document.getElementById('k-row-2'),
+                document.getElementById('k-row-3'),
+                document.getElementById('k-row-4')
+            ];
+
+            KEYBOARD_LAYOUT.forEach((rowKeys, rowIndex) => {
+                const container = rows[rowIndex];
+                if (!container) return;
+                container.innerHTML = '';
+                rowKeys.forEach(key => {
+                    const btn = document.createElement('div');
+                    btn.className = key === ' ' 
+                        ? 'v-key bg-bio-bg border border-bio-border text-slate-300 rounded-xl h-10 w-64 flex items-center justify-center text-xs font-mono uppercase tracking-widest'
+                        : 'v-key bg-bio-bg border border-bio-border text-slate-200 rounded-xl h-10 w-9 sm:w-10 flex items-center justify-center text-xs sm:text-sm font-mono uppercase font-semibold shadow-sm';
+                    btn.textContent = key === ' ' ? 'Spazio' : key;
+                    btn.dataset.key = key;
+                    container.appendChild(btn);
+                });
+            });
+        }
+
+        function highlightKey(char) {
+            document.querySelectorAll('.v-key').forEach(el => el.classList.remove('active-target'));
+            if (!char) return;
+            const target = char.toLowerCase();
+            const keyElement = document.querySelector(`.v-key[data-key="${target}"]`);
+            if (keyElement) {
+                keyElement.classList.add('active-target');
+            }
+        }
+
+        /* ========================================================
+           AUDIO SINTETIZZATORE (Web Audio API)
+           ======================================================== */
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            },
+            playSoftKey() {
+                if (!soundEnabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(520, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            },
+            playGentleNotice() {
+                if (!soundEnabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            },
+            playSuccess() {
+                if (!soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                [330, 392, 523].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0.05, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.3);
+                });
+            }
+        };
+
+        /* ========================================================
+           SINTESI VOCALE (SPEECH SYNTHESIS)
+           ======================================================== */
+        function speakCurrentText() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(currentText);
+                utterance.lang = 'it-IT';
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        /* ========================================================
+           ELEMENTI DOM & EVENTI NAVIGAZIONE SCHERMATE
+           ======================================================== */
+        const welcomePanel = document.getElementById('welcome-panel');
+        const setupPanel = document.getElementById('setup-panel');
+        const gamePanel = document.getElementById('game-panel');
+        const modalReport = document.getElementById('modal-report');
+        const modalInfo = document.getElementById('modal-info');
+        
+        const typingTextElem = document.getElementById('typing-text');
+        const hiddenInput = document.getElementById('hidden-input');
+        const focusOverlay = document.getElementById('focus-overlay');
+        const statTimer = document.getElementById('stat-timer');
+        const statWords = document.getElementById('stat-words');
+
+        // Gestione passaggio da Schermata Benvenuto a Configurazione
+        document.getElementById('user-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nameInput = document.getElementById('input-name').value.trim();
+            const surnameInput = document.getElementById('input-surname').value.trim();
+            
+            if (nameInput && surnameInput) {
+                studentName = nameInput;
+                studentSurname = surnameInput;
+                
+                document.getElementById('greeting-title').textContent = `Ciao, ${studentName}! Scegli la tua sfida`;
+                
+                welcomePanel.classList.add('hidden');
+                setupPanel.classList.remove('hidden');
+            }
+        });
+
+        // Pulsante indietro da setup a benvenuto
+        document.getElementById('btn-back-to-welcome').addEventListener('click', () => {
+            setupPanel.classList.add('hidden');
+            welcomePanel.classList.remove('hidden');
+        });
+
+        // Selezione Categorie
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.cat-btn').forEach(b => {
+                    b.classList.remove('active', 'border-sky-400', 'bg-sky-500/15');
+                    b.classList.add('border-bio-border', 'bg-bio-bg/50');
+                });
+                btn.classList.add('active', 'border-sky-400', 'bg-sky-500/15');
+                btn.classList.remove('border-bio-border', 'bg-bio-bg/50');
+                currentCategory = btn.dataset.cat;
+            });
+        });
+
+        // Selezione Tempo
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.time-btn').forEach(b => {
+                    b.classList.remove('active', 'border-sky-400', 'bg-sky-500/15');
+                    b.classList.add('border-bio-border', 'bg-bio-bg/50');
+                });
+                btn.classList.add('active', 'border-sky-400', 'bg-sky-500/15');
+                btn.classList.remove('border-bio-border', 'bg-bio-bg/50');
+                timeLimit = parseInt(btn.dataset.time);
+            });
+        });
+
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', resetGameSession);
+        document.getElementById('btn-play-again').addEventListener('click', () => {
+            modalReport.classList.add('hidden');
+            startGame();
+        });
+        document.getElementById('btn-change-setup').addEventListener('click', () => {
+            modalReport.classList.add('hidden');
+            gamePanel.classList.add('hidden');
+            setupPanel.classList.remove('hidden');
+        });
+
+        // Font DSA Toggle
+        document.getElementById('btn-font-toggle').addEventListener('click', () => {
+            dyslexiaFontActive = !dyslexiaFontActive;
+            if (dyslexiaFontActive) {
+                typingTextElem.classList.add('dyslexia-font');
+                document.getElementById('btn-font-toggle').classList.add('bg-sky-500/20', 'border', 'border-sky-400/50', 'text-sky-300');
+            } else {
+                typingTextElem.classList.remove('dyslexia-font');
+                document.getElementById('btn-font-toggle').classList.remove('bg-sky-500/20', 'border', 'border-sky-400/50', 'text-sky-300');
+            }
+        });
+
+        // Audio Toggle
+        document.getElementById('btn-audio-toggle').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark text-slate-500';
+        });
+
+        // Guida Modal
+        document.getElementById('btn-help').addEventListener('click', () => modalInfo.classList.remove('hidden'));
+        document.getElementById('btn-close-info').addEventListener('click', () => modalInfo.classList.add('hidden'));
+        document.getElementById('btn-ack-info').addEventListener('click', () => modalInfo.classList.add('hidden'));
+
+        document.getElementById('btn-speak').addEventListener('click', speakCurrentText);
+
+        /* ========================================================
+           LOGICA DI GIOCO
+           ======================================================== */
+        function startGame() {
+            setupPanel.classList.add('hidden');
+            gamePanel.classList.remove('hidden');
+            
+            textList = [...BIO_CONTENT[currentCategory]];
+            currentTextIndex = 0;
+            
+            resetGameSession();
+        }
+
+        function resetGameSession() {
+            clearInterval(timerInterval);
+            timerSeconds = timeLimit;
+            wordsCompletedCount = 0;
+            totalCharsTyped = 0;
+            totalErrorsCount = 0;
+            isStarted = false;
+            isGaming = true;
+
+            statWords.textContent = '0';
+            if (timeLimit > 0) {
+                statTimer.textContent = `${timerSeconds}s`;
+            } else {
+                statTimer.textContent = 'Libero';
+            }
+
+            loadNextSentence();
+            focusInput();
+        }
+
+        function loadNextSentence() {
+            if (currentTextIndex >= textList.length) {
+                currentTextIndex = 0;
+            }
+            currentText = textList[currentTextIndex];
+            currentCharIdx = 0;
+            renderSentence();
+            
+            if (currentText.length > 0) {
+                highlightKey(currentText[0]);
+            }
+        }
+
+        function renderSentence() {
+            typingTextElem.innerHTML = '';
+            currentText.split('').forEach((char, index) => {
+                const span = document.createElement('span');
+                span.classList.add('char');
+                if (index === 0) span.classList.add('current');
+                span.textContent = char;
+                typingTextElem.appendChild(span);
+            });
+        }
+
+        function focusInput() {
+            hiddenInput.focus();
+            focusOverlay.classList.add('hidden');
+        }
+
+        typingTextElem.addEventListener('click', focusInput);
+        hiddenInput.addEventListener('blur', () => {
+            if (isGaming) focusOverlay.classList.remove('hidden');
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (!isGaming) return;
+            if (e.key === 'Escape') {
+                resetGameSession();
+                return;
+            }
+            if (e.ctrlKey || e.altKey || e.metaKey || e.key === 'Tab') return;
+
+            if (document.activeElement !== hiddenInput) {
+                hiddenInput.focus();
+            }
+
+            if (!isStarted && e.key.length === 1 && timeLimit > 0) {
+                startTimer();
+                isStarted = true;
+            }
+
+            const charSpans = typingTextElem.querySelectorAll('.char');
+
+            if (e.key === 'Backspace') {
+                if (currentCharIdx > 0) {
+                    charSpans[currentCharIdx].classList.remove('current');
+                    currentCharIdx--;
+                    charSpans[currentCharIdx].className = 'char current';
+                    AudioFX.playSoftKey();
+                    highlightKey(currentText[currentCharIdx]);
+                }
+                return;
+            }
+
+            if (e.key.length === 1) {
+                if (currentCharIdx >= currentText.length) return;
+
+                const expected = currentText[currentCharIdx];
+                const typed = e.key;
+                totalCharsTyped++;
+
+                if (typed.toLowerCase() === expected.toLowerCase()) {
+                    charSpans[currentCharIdx].className = 'char correct';
+                    AudioFX.playSoftKey();
+                } else {
+                    charSpans[currentCharIdx].className = 'char incorrect';
+                    totalErrorsCount++;
+                    AudioFX.playGentleNotice();
+                }
+
+                currentCharIdx++;
+
+                if (currentCharIdx < currentText.length) {
+                    charSpans[currentCharIdx].classList.add('current');
+                    highlightKey(currentText[currentCharIdx]);
+                } else {
+                    wordsCompletedCount++;
+                    statWords.textContent = wordsCompletedCount;
+                    AudioFX.playSuccess();
+                    
+                    currentTextIndex++;
+                    setTimeout(() => {
+                        if (isGaming) loadNextSentence();
+                    }, 400);
+                }
+            }
+        });
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timerSeconds--;
+                statTimer.textContent = `${timerSeconds}s`;
+
+                if (timerSeconds <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            isGaming = false;
+            AudioFX.playSuccess();
+
+            const accuracy = totalCharsTyped > 0 
+                ? Math.max(0, Math.round(((totalCharsTyped - totalErrorsCount) / totalCharsTyped) * 100))
+                : 100;
+
+            document.getElementById('report-username').textContent = `${studentName} ${studentSurname}`;
+            document.getElementById('report-words').textContent = wordsCompletedCount;
+            document.getElementById('report-accuracy').textContent = `${accuracy}%`;
+
+            let praise = `Complimenti ${studentName}! Hai dimostrato grande impegno e concentrazione. La biologia è ricca di scoperte e le tue dita stanno diventando sempre più sicure!`;
+            if (accuracy >= 90) {
+                praise = `Fantastico ${studentName}! Precisione eccellente e ottima fluidità. Meriti il titolo speciale di Scienziato della Natura!`;
+            } else if (wordsCompletedCount >= 5) {
+                praise = `Ottimo lavoro ${studentName}! Hai completato tantissimi termini scientifici. Continua così!`;
+            }
+
+            document.getElementById('report-praise').textContent = praise;
+            modalReport.classList.remove('hidden');
+        }
+
+        window.onload = () => {
+            buildVirtualKeyboard();
+        };
+    </script>
+</body>
+</html>
